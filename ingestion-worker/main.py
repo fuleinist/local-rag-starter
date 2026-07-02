@@ -7,6 +7,7 @@ from typing import Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
@@ -186,3 +187,80 @@ Answer the question using only the context above. If the context doesn't contain
         answer = resp.json()["response"]
 
     return AskResponse(answer=answer, sources=sources)
+
+
+@app.post("/ask/stream")
+async def ask_stream(req: AskRequest):
+    """Answer a question using RAG with streaming response."""
+    # Embed the question
+    async with httpx.AsyncClient() as client:
+        emb_resp = await client.post(
+            f"{OLLAMA_URL}/api/embeddings",
+            json={"model": EMBED_MODEL, "prompt": req.question},
+        )
+        emb_resp.raise_for_status()
+        embedding = emb_resp.json()["embedding"]
+
+    # Search Qdrant
+    search_result = qdrant.search(
+        collection_name=COLLECTION_NAME,
+        query_vector=embedding,
+        limit=req.top_k,
+        with_payload=True,
+    )
+
+    if not search_result:
+        async def no_results():
+            yield "data: " + '{"type":"text","content":"No relevant documents found."}' + "\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(no_results(), media_type="text/event-stream")
+
+    # Build context
+    context_parts = []
+    sources = []
+    for i, hit in enumerate(search_result):
+        text = hit.payload.get("text", "")
+        fname = hit.payload.get("filename", "unknown")
+        context_parts.append(f"[Source {i+1}: {fname}]\n{text}")
+        sources.append({
+            "filename": fname,
+            "score": hit.score,
+            "excerpt": text[:200],
+        })
+
+    context = "\n\n".join(context_parts)
+    prompt = f"""You are a helpful assistant answering questions based on the provided documents.
+
+Context:
+{context}
+
+Question: {req.question}
+
+Answer the question using only the context above. If the context doesn't contain enough information, say so. Include citations like [Source 1], [Source 2] etc."""
+
+    async def generate():
+        # Send sources first
+        yield "data: " + '{"type":"sources","content":' + __import__("json").dumps(sources) + "}\n\n"
+
+        async with httpx.AsyncClient() as client:
+            async with client.stream(
+                "POST",
+                f"{OLLAMA_URL}/api/generate",
+                json={"model": CHAT_MODEL, "prompt": prompt, "stream": True},
+                timeout=120,
+            ) as resp:
+                async for line in resp.aiter_lines():
+                    if not line.strip():
+                        continue
+                    try:
+                        chunk = __import__("json").loads(line)
+                        if "response" in chunk:
+                            yield "data: " + __import__("json").dumps({"type": "text", "content": chunk["response"]}) + "\n\n"
+                        if chunk.get("done"):
+                            break
+                    except Exception:
+                        pass
+
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")

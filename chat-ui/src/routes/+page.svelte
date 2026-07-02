@@ -14,16 +14,49 @@
     messages = [...messages, { role: 'user', content: q }];
     loading = true;
 
+    const msgIdx = messages.length;
+    messages = [...messages, { role: 'assistant', content: '', sources: [] }];
+
     try {
-      const res = await fetch(`${API_URL}/ask`, {
+      const res = await fetch(`${API_URL}/ask/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q, top_k: 5 }),
       });
-      const data = await res.json();
-      messages = [...messages, { role: 'assistant', content: data.answer, sources: data.sources }];
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const data = JSON.parse(payload);
+            if (data.type === 'text') {
+              const m = [...messages];
+              m[msgIdx] = { ...m[msgIdx], content: m[msgIdx].content + data.content };
+              messages = m;
+            } else if (data.type === 'sources') {
+              const m = [...messages];
+              m[msgIdx] = { ...m[msgIdx], sources: data.content };
+              messages = m;
+            }
+          } catch {}
+        }
+      }
     } catch (e) {
-      messages = [...messages, { role: 'assistant', content: 'Error: could not reach ingestion worker.' }];
+      const m = [...messages];
+      m[msgIdx] = { role: 'assistant', content: 'Error: could not reach ingestion worker.', sources: [] };
+      messages = m;
     }
     loading = false;
   }
