@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# lrag — Local RAG CLI
+set -euo pipefail
+
+LRAG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+API_URL="${LRAG_API_URL:-http://localhost:8000}"
+
+cmd="${1:-help}"
+shift 2>/dev/null || true
+
+case "$cmd" in
+  up|start)
+    echo "Starting local-rag-starter..."
+    cd "$LRAG_DIR"
+    docker compose up -d
+    echo "Waiting for services..."
+    sleep 5
+    echo "Ready! API at http://localhost:8000, UI at http://localhost:3000"
+    ;;
+
+  down|stop)
+    cd "$LRAG_DIR"
+    docker compose down
+    ;;
+
+  status)
+    cd "$LRAG_DIR"
+    docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+    ;;
+
+  add)
+    path="${1:-.}"
+    echo "Ingesting: $path"
+    curl -s -X POST "$API_URL/ingest/path" -F "path=$path" | python3 -m json.tool
+    ;;
+
+  ask)
+    question="$*"
+    if [ -z "$question" ]; then
+      echo "Usage: lrag ask <question>"
+      exit 1
+    fi
+    curl -s -X POST "$API_URL/ask" \
+      -H "Content-Type: application/json" \
+      -d "{\"question\": \"$question\", \"top_k\": 5}" | python3 -m json.tool
+    ;;
+
+  list)
+    curl -s "$API_URL/documents" | python3 -m json.tool
+    ;;
+
+  remove)
+    name="$1"
+    if [ -z "$name" ]; then
+      echo "Usage: lrag remove <filename>"
+      exit 1
+    fi
+    curl -s -X DELETE "$API_URL/documents/$name" | python3 -m json.tool
+    ;;
+
+  logs)
+    cd "$LRAG_DIR"
+    docker compose logs --tail=50 -f
+    ;;
+
+  help|*)
+    echo "local-rag-starter — One-command local RAG"
+    echo ""
+    echo "Usage:"
+    echo "  lrag up              Start all services (docker compose up)"
+    echo "  lrag down            Stop all services"
+    echo "  lrag status          Show service status"
+    echo "  lrag add <path>      Ingest a file or directory"
+    echo "  lrag ask <question>  Ask a question"
+    echo "  lrag list            List ingested documents"
+    echo "  lrag remove <name>   Remove a document"
+    echo "  lrag logs            Tail service logs"
+    echo ""
+    echo "Environment:"
+    echo "  LRAG_API_URL  API base URL (default: http://localhost:8000)"
+    ;;
+esac
