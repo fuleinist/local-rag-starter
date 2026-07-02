@@ -40,9 +40,10 @@ case "$cmd" in
       echo "Usage: lrag ask <question>"
       exit 1
     fi
+    payload=$(python3 -c 'import json,sys; print(json.dumps({"question": sys.argv[1], "top_k": 5}))' "$question")
     curl -s -X POST "$API_URL/ask" \
       -H "Content-Type: application/json" \
-      -d "{\"question\": \"$question\", \"top_k\": 5}" | python3 -m json.tool
+      -d "$payload" | python3 -m json.tool
     ;;
 
   list)
