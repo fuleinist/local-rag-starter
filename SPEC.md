@@ -23,40 +23,40 @@ lrag ask "how does auth work?"
 ## Acceptance Criteria
 
 ### Docker Compose (MVP)
-- [ ] `docker compose up` starts: Ollama, Qdrant, ingestion worker, chat UI
-- [ ] Ollama auto-pulls a default embedding model (nomic-embed-text) and chat model (qwen2.5:3b)
-- [ ] All services communicate via Docker network
-- [ ] Volumes mounted for persistence (Qdrant data, Ollama models)
+- [x] `docker compose up` starts: Ollama, Qdrant, ingestion worker, chat UI
+- [x] Ollama auto-pulls a default embedding model (nomic-embed-text) and chat model (qwen2.5:3b)
+- [x] All services communicate via Docker network
+- [x] Volumes mounted for persistence (Qdrant data, Ollama models)
 
 ### CLI (`lrag`)
-- [ ] `lrag add <path>` — ingests files (PDF, markdown, txt, code) into Qdrant
-- [ ] `lrag ask <question>` — answers from ingested documents
-- [ ] `lrag status` — shows service health and document count
-- [ ] `lrag list` — lists ingested documents
-- [ ] `lrag remove <id>` — deletes a document from index
-- [ ] Cross-platform (Linux, macOS, Windows via Docker)
+- [x] `lrag add <path>` — ingests files (PDF, markdown, txt, code) into Qdrant
+- [x] `lrag ask <question>` — answers from ingested documents
+- [x] `lrag status` — shows service health and document count
+- [x] `lrag list` — lists ingested documents
+- [x] `lrag remove <id>` — deletes a document from index
+- [x] Cross-platform (Linux, macOS, Windows via Docker)
 
 ### Ingestion Worker (FastAPI)
-- [ ] REST API for document ingestion
-- [ ] Supports: PDF, markdown, plain text, code files
-- [ ] Chunks documents semantically (by paragraphs/sections)
-- [ ] Embeds chunks via Ollama (nomic-embed-text)
-- [ ] Stores vectors in Qdrant with metadata (filename, source, chunk index)
-- [ ] Watches a mounted directory for auto-ingestion
+- [x] REST API for document ingestion
+- [x] Supports: PDF, markdown, plain text, code files
+- [x] Chunks documents semantically (by paragraphs/sections)
+- [x] Embeds chunks via Ollama (nomic-embed-text)
+- [x] Stores vectors in Qdrant with metadata (filename, source, chunk index)
+- [x] Watches a mounted directory for auto-ingestion
 
 ### Chat UI (Svelte/React)
-- [ ] Chat interface with message history
-- [ ] Shows source citations with document name and chunk excerpt
-- [ ] Streaming responses from Ollama
-- [ ] Dark/light mode
-- [ ] Document list with delete capability
+- [x] Chat interface with message history
+- [x] Shows source citations with document name and chunk excerpt
+- [x] Streaming responses from Ollama
+- [x] Dark/light mode toggle
+- [x] Document list with delete capability
 
 ### Query Pipeline
-- [ ] Embeds user query via Ollama
-- [ ] Searches Qdrant for top-k similar chunks
-- [ ] Constructs prompt with context + question
-- [ ] Streams response from Ollama chat model
-- [ ] Returns citations with source documents
+- [x] Embeds user query via Ollama
+- [x] Searches Qdrant for top-k similar chunks
+- [x] Constructs prompt with context + question
+- [x] Streams response from Ollama chat model
+- [x] Returns citations with source documents
 
 ## Tech Stack
 - **Orchestration:** Docker Compose

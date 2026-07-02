@@ -12,7 +12,10 @@ from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
+import threading
+
 from ingest import Ingestor
+from watcher import DirWatcher, WATCH_DIR
 
 app = FastAPI(title="LRAG Ingestion Worker", version="1.0.0")
 
@@ -25,10 +28,16 @@ EMBED_DIM = 768  # nomic-embed-text
 
 qdrant = QdrantClient(url=QDRANT_URL)
 ingestor = Ingestor(qdrant, OLLAMA_URL, EMBED_MODEL, COLLECTION_NAME)
+watcher = DirWatcher(ingestor)
 
 
 @app.on_event("startup")
 async def startup():
+    # Start directory watcher in background thread
+    if WATCH_DIR.exists():
+        t = threading.Thread(target=watcher.run_forever, daemon=True)
+        t.start()
+        print(f"Directory watcher started on {WATCH_DIR}")
     """Ensure Ollama models are pulled and Qdrant collection exists."""
     async with httpx.AsyncClient() as client:
         for model in [EMBED_MODEL, CHAT_MODEL]:
@@ -45,6 +54,12 @@ async def startup():
             vectors_config=VectorParams(size=EMBED_DIM, distance=Distance.COSINE),
         )
         print(f"Created collection '{COLLECTION_NAME}'")
+
+    # Initial scan of watch directory
+    if WATCH_DIR.exists():
+        results = watcher.scan()
+        if results:
+            print(f"Initial scan: {len(results)} files ingested")
 
 
 class AskRequest(BaseModel):

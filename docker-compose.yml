@@ -41,6 +41,8 @@ services:
       - EMBED_MODEL=nomic-embed-text
       - CHAT_MODEL=qwen2.5:3b
       - COLLECTION_NAME=documents
+      - WATCH_DIR=/documents
+      - WATCH_POLL_SECONDS=10
     depends_on:
       ollama:
         condition: service_healthy

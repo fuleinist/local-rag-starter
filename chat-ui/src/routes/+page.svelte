@@ -4,6 +4,12 @@
   let loading = false;
   let documents = [];
   let showDocs = false;
+  let darkMode = true;
+
+  function toggleTheme() {
+    darkMode = !darkMode;
+    document.body.classList.toggle('light', !darkMode);
+  }
 
   const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -82,6 +88,9 @@
   <header>
     <h1>🧠 LRAG</h1>
     <span class="subtitle">Local RAG Chat</span>
+    <button class="doc-btn" on:click={toggleTheme}>
+      {darkMode ? '☀️' : '🌙'}
+    </button>
     <button class="doc-btn" on:click={loadDocs}>
       {showDocs ? '✕ Close' : '📄 Docs'}
     </button>
@@ -145,6 +154,11 @@
     background: #0f0f13;
     color: #e0e0e0;
     height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+  :global(body.light) {
+    background: #f5f5f7;
+    color: #1a1a2e;
   }
   .app {
     display: flex;
@@ -161,10 +175,13 @@
     border-bottom: 1px solid #2a2a35;
     background: #1a1a24;
   }
+  :global(body.light) header {
+    background: #ffffff;
+    border-bottom-color: #e0e0e0;
+  }
   header h1 { font-size: 20px; }
   .subtitle { color: #888; font-size: 13px; }
   .doc-btn {
-    margin-left: auto;
     background: #2a2a35;
     border: 1px solid #3a3a48;
     color: #ccc;
@@ -174,10 +191,20 @@
     font-size: 13px;
   }
   .doc-btn:hover { background: #3a3a48; }
+  :global(body.light) .doc-btn {
+    background: #e8e8ed;
+    border-color: #d0d0d8;
+    color: #333;
+  }
+  :global(body.light) .doc-btn:hover { background: #d8d8e0; }
   .doc-panel {
     background: #1a1a24;
     border-bottom: 1px solid #2a2a35;
     padding: 12px 20px;
+  }
+  :global(body.light) .doc-panel {
+    background: #ffffff;
+    border-bottom-color: #e0e0e0;
   }
   .doc-panel h3 { font-size: 14px; margin-bottom: 8px; color: #aaa; }
   .empty { color: #666; font-size: 13px; }
@@ -224,6 +251,10 @@
     background: #2a2a35;
     border-bottom-left-radius: 4px;
   }
+  :global(body.light) .assistant .bubble {
+    background: #e8e8ed;
+    color: #1a1a2e;
+  }
   .thinking { color: #888; font-style: italic; }
   .sources {
     margin-top: 6px;
@@ -244,6 +275,10 @@
     border-top: 1px solid #2a2a35;
     background: #1a1a24;
   }
+  :global(body.light) .input-bar {
+    background: #ffffff;
+    border-top-color: #e0e0e0;
+  }
   .input-bar input {
     flex: 1;
     padding: 10px 14px;
@@ -255,6 +290,11 @@
     outline: none;
   }
   .input-bar input:focus { border-color: #3b82f6; }
+  :global(body.light) .input-bar input {
+    background: #f5f5f7;
+    border-color: #d0d0d8;
+    color: #1a1a2e;
+  }
   .input-bar button {
     padding: 10px 20px;
     background: #3b82f6;
